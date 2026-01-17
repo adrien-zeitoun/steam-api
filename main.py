@@ -16,33 +16,24 @@ def check_key(key):
 def home():
     return {"status": "API Steam OK"}
 
-@app.get("/recent-games")
-def recent_games(x_api_key: str = Header(None)):
+@app.get("/dashboard")
+def dashboard(x_api_key: str = Header(None)):
     check_key(x_api_key)
 
-    url = f"https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={API_KEY}&steamid={STEAM_ID}&include_appinfo=true"
-    data = requests.get(url).json()
+    games_url = f"https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={API_KEY}&steamid={STEAM_ID}&include_appinfo=true"
+    games = requests.get(games_url).json()["response"]["games"]
 
-    games = data["response"]["games"]
-    games_sorted = sorted(games, key=lambda x: x.get("rtime_last_played", 0), reverse=True)
+    recent = sorted(games, key=lambda x: x.get("rtime_last_played", 0), reverse=True)[:3]
 
-    return games_sorted[:3]
-
-@app.get("/trophies")
-def trophies(x_api_key: str = Header(None)):
-    check_key(x_api_key)
-
-    url = f"https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={API_KEY}&steamid={STEAM_ID}"
-    games = requests.get(url).json()["response"]["games"]
-
-    total = 0
+    total_trophies = 0
     for g in games:
-        ach = requests.get(
-            f"https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/"
-            f"?key={API_KEY}&steamid={STEAM_ID}&appid={g['appid']}"
-        ).json()
+        ach_url = f"https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key={API_KEY}&steamid={STEAM_ID}&appid={g['appid']}"
+        ach = requests.get(ach_url).json()
 
         if "playerstats" in ach and "achievements" in ach["playerstats"]:
-            total += sum(a["achieved"] for a in ach["playerstats"]["achievements"])
+            total_trophies += sum(a["achieved"] for a in ach["playerstats"]["achievements"])
 
-    return {"total_trophies": total}
+    return {
+        "total_trophies": total_trophies,
+        "recent_games": recent
+    }
