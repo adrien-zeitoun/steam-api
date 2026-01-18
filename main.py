@@ -23,10 +23,12 @@ def dashboard(x_api_key: str = Header(None)):
     games_url = f"https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={API_KEY}&steamid={STEAM_ID}&include_appinfo=true"
     games = requests.get(games_url).json()["response"]["games"]
 
+    # 3 derniers jeux joués
     recent = sorted(games, key=lambda x: x.get("rtime_last_played", 0), reverse=True)[:3]
 
+    # Limite à 10 jeux pour les trophées
     total_trophies = 0
-    for g in games:
+    for g in games[:10]:
         ach_url = f"https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key={API_KEY}&steamid={STEAM_ID}&appid={g['appid']}"
         ach = requests.get(ach_url).json()
 
@@ -37,3 +39,5 @@ def dashboard(x_api_key: str = Header(None)):
         "total_trophies": total_trophies,
         "recent_games": recent
     }
+
+    
